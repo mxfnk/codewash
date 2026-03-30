@@ -39,6 +39,48 @@ SKIP_DIRS: frozenset[str] = frozenset(
 # Public API
 # ---------------------------------------------------------------------------
 
+def walk_all(root: Path, config: CodewashConfig | None = None) -> list[Path]:
+    """Return all non-symlink files under *root*, skipping standard junk dirs.
+
+    Unlike :func:`scan`, this does *not* filter by extension or relevance —
+    it is used to ensure every file ends up in the anonymized copy.
+    """
+    if config is None:
+        config = CodewashConfig()
+
+    results: list[Path] = []
+    _walk_all(root, root, config.exclude_paths, results)
+    results.sort()
+    return results
+
+
+def _walk_all(
+    root: Path,
+    current: Path,
+    exclude_globs: list[str],
+    results: list[Path],
+) -> None:
+    try:
+        entries = list(current.iterdir())
+    except PermissionError:
+        return
+
+    for entry in entries:
+        if entry.is_symlink():
+            continue
+        if entry.is_dir():
+            if entry.name in SKIP_DIRS:
+                continue
+            rel = entry.relative_to(root).as_posix()
+            if _matches_any_glob(rel, exclude_globs):
+                continue
+            _walk_all(root, entry, exclude_globs, results)
+        elif entry.is_file():
+            rel = entry.relative_to(root).as_posix()
+            if not _matches_any_glob(rel, exclude_globs):
+                results.append(entry)
+
+
 def scan(root: Path, config: CodewashConfig | None = None) -> list[Path]:
     """Return a sorted list of relevant file paths under *root*.
 

@@ -184,7 +184,12 @@ def anon(
     console.print(f"Source:  [bold]{source}[/bold]")
     console.print(f"Output:  [bold]{out_dir}[/bold]")
 
-    files = scan_module(source, cfg)
+    from codewash.scanner import walk_all as _walk_all
+
+    scanned_files = scan_module(source, cfg)
+    all_files = _walk_all(source, cfg)
+    scanned_set = set(scanned_files)
+
     console.print(f"Rules:   [bold]{_count_rules(cfg)} patterns loaded[/bold]")
     console.print()
 
@@ -195,20 +200,19 @@ def anon(
         TimeElapsedColumn(),
         console=console,
     ) as progress:
-        task = progress.add_task("Processing...", total=len(files))
+        task = progress.add_task("Processing...", total=len(all_files))
 
-        # We wrap anonymize to get per-file progress by scanning manually
         from codewash.detector import detect_file as _detect
         from codewash.replacer import Replacer
         import shutil as _shutil
 
         replacer = Replacer()
         from codewash.models import Stats
-        stats = Stats(files_scanned=len(files))
+        stats = Stats(files_scanned=len(all_files))
 
-        # First pass
-        file_findings = {}
-        for f in files:
+        # First pass: detect findings in scanned files only
+        file_findings: dict[Path, list] = {}
+        for f in scanned_files:
             findings = _detect(f, config=cfg)
             file_findings[f] = findings
             for finding in findings:
@@ -217,26 +221,29 @@ def anon(
                 rel = f.relative_to(source).as_posix()
                 replacer.record_file(finding.replace_value, rel)
 
-        # Second pass
+        # Second pass: copy all files; apply replacements only to scanned files
         out_dir.mkdir(parents=True, exist_ok=True)
-        for f in files:
+        for f in all_files:
             rel = f.relative_to(source)
             dest = out_dir / rel
             dest.parent.mkdir(parents=True, exist_ok=True)
 
-            findings = file_findings[f]
-            if not findings:
+            if f not in scanned_set:
                 _shutil.copy2(f, dest)
             else:
-                try:
-                    content = f.read_text(encoding="utf-8", errors="replace")
-                    new_content, n = replacer.apply_to_text(content, findings)
-                    dest.write_text(new_content, encoding="utf-8")
-                    if new_content != content:
-                        stats.files_modified += 1
-                        stats.replacements_made += n
-                except OSError:
+                findings = file_findings[f]
+                if not findings:
                     _shutil.copy2(f, dest)
+                else:
+                    try:
+                        content = f.read_text(encoding="utf-8", errors="replace")
+                        new_content, n = replacer.apply_to_text(content, findings)
+                        dest.write_text(new_content, encoding="utf-8")
+                        if new_content != content:
+                            stats.files_modified += 1
+                            stats.replacements_made += n
+                    except OSError:
+                        _shutil.copy2(f, dest)
             progress.advance(task)
 
         map_path = replacer.save_mapping(out_dir)
