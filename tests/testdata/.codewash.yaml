@@ -1,0 +1,18 @@
+additional_patterns:
+  - name: "ticket-keys"
+    pattern: "(?:INFRA|DEVOPS|PLAT)-\\d+"
+    replacement: "TICKET-{n}"
+
+allowlist:
+  - "hooks.slack.com"
+
+denylist:
+  - "meinefirma"
+
+extra_extensions:
+  - "j2"
+
+exclude_paths:
+  - "*.test.*"
+
+scan_comments: false

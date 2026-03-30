@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: backend
+  namespace: production
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: backend
+  template:
+    metadata:
+      labels:
+        app: backend
+    spec:
+      containers:
+        - name: backend
+          image: 123456789012.dkr.ecr.eu-central-1.amazonaws.com/backend:v1.2.3
+          ports:
+            - containerPort: 8080
+          env:
+            - name: DATABASE_URL
+              value: "postgresql://appuser:TopSecretPw99@db-prod-01.internal.corp:5432/appdb"
+            - name: REDIS_HOST
+              value: "redis-staging-01"
+            - name: SMTP_HOST
+              value: "mail.meinefirma.internal"
+            - name: ADMIN_EMAIL
+              value: "admin@meinefirma.de"
+            - name: PUBLIC_BUCKET
+              value: "s3://my-company-prod-artifacts/releases"
+            - name: ARN_EXAMPLE
+              value: "arn:aws:iam::123456789012:role/backend-role"
+            - name: ALLOWED_ADDR
+              value: "127.0.0.1"
+            - name: DEBUG_IP
+              value: "10.0.0.55"
+
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: backend-ingress
+spec:
+  rules:
+    - host: app.meinefirma.internal
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
+    - host: api.meinefirma.corp
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: backend
+                port:
+                  number: 80
