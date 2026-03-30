@@ -14,6 +14,8 @@
 
 **Designed for DevOps code:** GitLab CI pipelines, Kubernetes manifests, Helm charts, Dockerfiles, Bash and Python scripts, Terraform configurations, and general infrastructure config files.
 
+> **Note:** This tool was built by AI agents.
+
 ---
 
 ## Why codewash?
