@@ -176,12 +176,12 @@ _GITLAB_TOKEN_RE = re.compile(
 # ---------------------------------------------------------------------------
 
 _PASSWORD_ASSIGNMENT_RE = re.compile(
-    r"(?:password|passwd|pass|pwd|secret)[\"'\s]*[=:][\"'\s]*([^\s\"'`#]{4,})",
+    r"(?:password|passwd|pass|pwd|secret)[\"'\s]*[=:][\"'\s]*(?!\$)([^\s\"'`#]{4,})",
     re.IGNORECASE,
 )
 
 _CONNSTRING_PASSWORD_RE = re.compile(
-    r"(?:postgres|postgresql|mysql|mongodb|redis)://[^:]+:([^@\s\"'`]{4,})@",
+    r"(?:postgres|postgresql|mysql|mongodb|redis)://[^:]+:(?!\$)([^@\s\"'`]{4,})@",
     re.IGNORECASE,
 )
 
